@@ -11,7 +11,6 @@ type Path = [City]
 type Distance = Int
 
 type RoadMap = [(City,City,Distance)]
-
 cities :: RoadMap -> [City]
 cities roadMap = nub $ concatMap (\(c1, c2, _) -> [c1, c2]) roadMap
 
@@ -34,7 +33,13 @@ adjacent ((c1, c2, dist):roadMap) city
     | otherwise = adjacent roadMap city
 
 pathDistance :: RoadMap -> Path -> Maybe Distance
-pathDistance = undefined
+pathDistance _ [] = Just 0
+pathDistance _ [_] = Just 0
+pathDistance roadMap (firstCity:secondCity:path) = do
+    firstDist <- distance roadMap firstCity secondCity
+    remainingDists <- pathDistance roadMap (secondCity:path)
+    return (firstDist + remainingDists)
+
 
 rome :: RoadMap -> [City]
 rome = undefined
