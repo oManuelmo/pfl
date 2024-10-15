@@ -40,9 +40,17 @@ pathDistance roadMap (firstCity:secondCity:path) = do
     remainingDists <- pathDistance roadMap (secondCity:path)
     return (firstDist + remainingDists)
 
+getBiggest :: RoadMap -> City -> City -> [City]
+getBiggest roadMap city1 city2 
+    | length(adjacent roadMap city1) == length(adjacent roadMap city2) = [city1, city2]
+    | length(adjacent roadMap city1) > length(adjacent roadMap city2) = [city1]
+    | otherwise = [city2]
 
 rome :: RoadMap -> [City]
-rome = undefined
+rome roadMap = do
+    citiesList <- cities roadMap
+
+
 
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected = undefined
