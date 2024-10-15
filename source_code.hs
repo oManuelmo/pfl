@@ -20,7 +20,7 @@ areAdjacent [] city1 city2 = False
 areAdjacent ((c1, c2, _):roadMap) city1 city2 = ((c1==city1 && c2==city2) || (c2==city1 && c1==city2)) || (areAdjacent roadMap city1 city2)
 --areAdjacent roadMap city1 city2 = any (\(c1, c2, _) -> (c1 == city1 && c2 == city2) || (c1 == city2 && c2 == city1)) roadMap
 
-distance :: RoadMap -> City -> City -> Maybe Distance --se for para calcular entre cidades não adjacentes, não dá
+distance :: RoadMap -> City -> City -> Maybe Distance
 distance [] _ _ = Nothing -- o Nothing é por causa do Maybe
 distance ((c1, c2, dist):roadMap) city1 city2
     | (c1 == city1 && c2 == city2) || (c1 == city2 && c2 == city1) = Just dist -- o Just é por causa do Maybe
