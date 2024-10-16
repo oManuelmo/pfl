@@ -40,20 +40,26 @@ pathDistance roadMap (firstCity:secondCity:path) = do
     remainingDists <- pathDistance roadMap (secondCity:path)
     return (firstDist + remainingDists)
 
-getBiggest :: RoadMap -> City -> City -> [City]
+--funcao para mostrar os indegrees das cidades todas
+getAlladj:: RoadMap -> [(City,Int)]
+getAlladj roadMap = map (\city -> (city, length (adjacent roadMap city))) (cities roadMap)
+
+getBiggest :: RoadMap -> [City] -> City -> [City]
 getBiggest roadMap city1 city2 
-    | length(adjacent roadMap city1) == length(adjacent roadMap city2) = [city1, city2]
-    | length(adjacent roadMap city1) > length(adjacent roadMap city2) = [city1]
+    | length(adjacent roadMap (head city1)) == length(adjacent roadMap city2) = city1 ++ [city2]
+    | length(adjacent roadMap (head city1)) > length(adjacent roadMap city2) = city1
     | otherwise = [city2]
 
 rome :: RoadMap -> [City]
-rome roadMap = do
-    citiesList <- cities roadMap
+rome roadMap = foldl compare [] (cities roadMap)
+    where 
+        compare [] city = [city]  --se tiver vazio mete a primeira cidade
+        compare biggestCities city = getBiggest roadMap biggestCities city --compara cidade a cidade
 
 
 
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected = undefined
+isStronglyConnected = undefined 
 
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath = undefined
