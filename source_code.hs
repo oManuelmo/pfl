@@ -1,4 +1,5 @@
 import Data.List (nub)
+import qualified Data.Set as Set
 --import qualified Data.Array
 --import qualified Data.Bits
 
@@ -9,8 +10,9 @@ import Data.List (nub)
 type City = String
 type Path = [City]
 type Distance = Int
-
 type RoadMap = [(City,City,Distance)]
+type Visited = Set.Set City
+
 cities :: RoadMap -> [City]
 cities roadMap = nub $ concatMap (\(c1, c2, _) -> [c1, c2]) roadMap
 
@@ -57,9 +59,29 @@ rome roadMap = foldl compare [] (cities roadMap)
         compare biggestCities city = getBiggest roadMap biggestCities city --compara cidade a cidade
 
 
+adjacent2 :: RoadMap -> City -> [City]
+adjacent2 [] city = []
+adjacent2 ((c1, c2, dist):roadMap) city
+    | c1 == city = [c2] ++ (adjacent2 roadMap city)
+    | c2 == city = [c1] ++ (adjacent2 roadMap city)
+    | otherwise = adjacent2 roadMap city
 
+
+dfs :: RoadMap -> City -> Visited -> [City]
+dfs roadMap city visited
+    | Set.member city visited = [] --se estiver visitada nao adiciona
+    | otherwise = [city] ++ concatMap(\adjacent -> dfs roadMap adjacent nVisited) adjacents
+    where  
+        adjacents = adjacent2 roadMap city
+        nVisited = Set.insert city visited
+
+
+--temos que usar Set.size porque pode msm assim ocorrer duplicados ao fazer a funcao dfs
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected = undefined 
+isStronglyConnected roadMap 
+    | Set.size(Set.fromList (dfs roadMap (head(cities roadMap)) Set.empty)) == length(cities roadMap) = True
+    | otherwise = False
+
 
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath = undefined
