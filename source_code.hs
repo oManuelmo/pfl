@@ -1,5 +1,4 @@
 import Data.List (nub)
-import qualified Data.Set as Set
 --import qualified Data.Array
 --import qualified Data.Bits
 
@@ -11,7 +10,6 @@ type City = String
 type Path = [City]
 type Distance = Int
 type RoadMap = [(City,City,Distance)]
-type Visited = Set.Set City
 
 cities :: RoadMap -> [City]
 cities roadMap = nub $ concatMap (\(c1, c2, _) -> [c1, c2]) roadMap
@@ -67,20 +65,18 @@ adjacent2 ((c1, c2, dist):roadMap) city
     | otherwise = adjacent2 roadMap city
 
 
-dfs :: RoadMap -> City -> Visited -> [City]
+dfs :: RoadMap -> City -> [City] -> [City]                  
 dfs roadMap city visited
-    | Set.member city visited = [] --se estiver visitada nao adiciona
-    | otherwise = [city] ++ concatMap(\adjacent -> dfs roadMap adjacent nVisited) adjacents
+    | city `elem` visited = [] --se estiver visitada nao adiciona
+    | otherwise = city : concatMap(\adjacent -> dfs roadMap adjacent nVisited) adjacents
     where  
         adjacents = adjacent2 roadMap city
-        nVisited = Set.insert city visited
+        nVisited = city : visited
 
 
 --temos que usar Set.size porque pode msm assim ocorrer duplicados ao fazer a funcao dfs
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected roadMap 
-    | Set.size(Set.fromList (dfs roadMap (head(cities roadMap)) Set.empty)) == length(cities roadMap) = True
-    | otherwise = False
+isStronglyConnected roadMap = length(nub (dfs roadMap (head(cities roadMap)) [])) == length(cities roadMap)
 
 
 shortestPath :: RoadMap -> City -> City -> [Path]
@@ -88,6 +84,11 @@ shortestPath = undefined
 
 travelSales :: RoadMap -> Path
 travelSales = undefined
+
+
+
+
+
 
 tspBruteForce :: RoadMap -> Path
 tspBruteForce = undefined -- only for groups of 3 people; groups of 2 people: do not edit this function
