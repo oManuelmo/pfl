@@ -13,6 +13,7 @@ type RoadMap = [(City,City,Distance)]
 
 -- Função para criar uma lista de todas as cidades únicas
 -- RoadMap: Grafo
+-- [City]: Lista de cidades
 cities :: RoadMap -> [City]
 cities roadMap = nub $ concatMap (\(c1, c2, _) -> [c1, c2]) roadMap
 
