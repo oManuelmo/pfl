@@ -1,6 +1,10 @@
+import qualified Data.Set as Set
+import Data.Maybe (fromMaybe, isNothing)
+import Data.Ord (comparing)
+import Data.List (permutations, minimumBy, nub)
+import Data.Bits (shiftL, testBit, setBit, clearBit)
+import Data.Array (Array, array, bounds, (!), (//))
 import Data.List (nub)
---import qualified Data.Array
---import qualified Data.Bits
 
 -- PFL 2024/2025 Practical assignment 1
 
@@ -82,8 +86,43 @@ isStronglyConnected roadMap = length(nub (dfs roadMap (head(cities roadMap)) [])
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath = undefined
 
+type DPTable = Array (Int, Int) (Maybe Distance)
+
+cityIndex :: City -> Int -- "0" para 0
+cityIndex city = read city :: Int
+
+tspDP :: RoadMap -> DPTable -> City -> City -> Int -> Int -> Distance
+tspDP roadMap dp startCity currentCity visited allVisited
+    | visited == allVisited = fromMaybe 2147483647 (distance roadMap currentCity startCity)  -- Se tiver visitado tudo, retorna para o inicial (neste caso "0")
+    | otherwise = dp ! (cityIndex currentCity, visited) `orElse` -- se for Nothing, então faz o próximo
+                minimum [fromMaybe 2147483647 (distance roadMap currentCity nextCity) + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited
+                | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- o testbit basicamente vê se o nextCity ja foi visitado, pondo um not, quer dizer que se o nextCity n foi visitado, dá TRUE
+  where
+    orElse (Just x) _ = x
+    orElse Nothing y = y
+
 travelSales :: RoadMap -> Path
-travelSales = undefined
+travelSales roadMap =
+    let allCities = cities roadMap
+        n = length allCities
+        startCity = "0"  --Começa-se pelo pela cidade 0 
+        allVisited = (1 `shiftL` n) - 1  -- Bitmask para todas as cidades
+        dp = array ((0, 0), (n - 1, allVisited)) [((i, visited), Nothing) | i <- [0..n-1], visited <- [0..allVisited]] --dynamic programming table para guardar os custos de cidade para cidade
+    in buildPath roadMap dp startCity allVisited  -- Build the optimal path
+
+buildPath :: RoadMap -> DPTable -> City -> Int -> Path
+buildPath roadMap dp startCity allVisited =
+    let path = [startCity]  -- Start from the start city
+        recurse currentCity visited
+            | visited == allVisited = [startCity]  -- Acabou, volta para "0"
+            | otherwise =
+                let unvisitedCities = filter (not . testBit visited . cityIndex) (cities roadMap) -- cidades ainda não visitadas
+                    distances = [(fromMaybe 2147483647 (distance roadMap currentCity nc) -- a distância entre as duas cidades mais o custo do resto
+                                + tspDP roadMap dp startCity nc (visited `setBit` cityIndex nc) allVisited, nc) | nc <- unvisitedCities]
+                    nextCity = snd (minimumBy (comparing fst) distances)
+                in nextCity : recurse nextCity (visited `setBit` cityIndex nextCity)
+    in path ++ recurse startCity (1 `shiftL` cityIndex startCity)
+
 
 
 
