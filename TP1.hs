@@ -111,12 +111,12 @@ findAllPaths :: RoadMap -> City -> City -> [Path]
 findAllPaths roadMap start end = dfs start []
   where
     dfs current visited
-        | current == end = [reverse (end : visited)]  -- Return the full path when end is reached
+        | current == end = [reverse (end : visited)]  -- reverte a ondem do path criado
         | current `elem` visited = [] 
         | otherwise = concatMap extendPath adjacents
         where
-            adjacents = adjacent2 roadMap current  -- Use adjacent2 to get all adjacent cities
-            extendPath nextCity = dfs nextCity (current : visited)  -- Continue searching from next city
+            adjacents = adjacent2 roadMap current  
+            extendPath nextCity = dfs nextCity (current : visited)  
 
 
 -- Função que verifica se todas as cidades se conseguem ligar totalmente
