@@ -41,10 +41,14 @@ A função `buildPath`recebe a tabela de *memoização*, a cidade inicial e o bi
 ```c
 tspDP :: RoadMap -> DPTable -> City -> City -> Int -> Int -> Distance
 tspDP roadMap dp startCity currentCity visited allVisited
-    | visited == allVisited = distanceOrDefault roadMap currentCity startCity 2147483647  -- Se tiver visitado tudo, retorna para o inicial
-    | otherwise = dp ! (cityIndex currentCity, visited) `orElse` -- Se ainda não estiver no DPTable então resolve-se o subproblema recursivamente para encontrar a menor distância
-                minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a próxima, se não exsitir fica o INT_MAX
-                        + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited -- Soma-se a menor distância da proxima cidade para a primeira cidade com a próxima cidade visitada
-                        | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- Faz se isto para todas as cidades ainda não visitadas
+    | visited == allVisited = distanceOrDefault roadMap currentCity startCity 2147483647  -- Caso base
+    | otherwise =
+        let cachedResult = dp ! (cityIndex currentCity, visited) `orElse` computeAndStore
+            computeAndStore = 
+                let result = minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a próxima, se não exsitir fica o INT_MAX
+                                      + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited -- Soma-se a menor distância da proxima cidade para a primeira cidade com a próxima cidade visitada
+                                      | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- Faz se isto para todas as cidades ainda não visitadas
+                in result `seq` (dp // [((cityIndex currentCity, visited), Just result)] ! (cityIndex currentCity, visited)) `orElse` result
+        in cachedResult
 ```
-Nesta função auxiliar, ela recebe a tabela de programação dinâmica, a cidade inicial, a cidade atual, o bitmask das cidades visitadas naquele momento e o bitmask de todas as cidades visitadas. Em primeiro lugar, se todas as cidades forem visitadas, então a função retorna a distância entre a cidade atual e a cidade inicial (se não existir, retorna maxBound que é 2147483647). Caso ainda não estejam todas as cidades visitadas, a função vê se o subproblema já foi resolvido, se não resolve-se, dando o mínimo das distâncias entre a cidade atual e todas outras cidades ainda não visitadas.
+Nesta função auxiliar, ela recebe a tabela de programação dinâmica, a cidade inicial, a cidade atual, o bitmask das cidades visitadas naquele momento e o bitmask de todas as cidades visitadas. Em primeiro lugar, se todas as cidades forem visitadas, então a função retorna a distância entre a cidade atual e a cidade inicial (se não existir, retorna maxBound que é 2147483647). Caso ainda não estejam todas as cidades visitadas, a função vê se o subproblema já foi resolvido, se não resolve-se, dando o mínimo das distâncias entre a cidade atual e todas outras cidades ainda não visitadas. De seguida, guardo o resultado para futuramente não refazer o mesmo subproblema.
