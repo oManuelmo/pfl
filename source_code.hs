@@ -1,15 +1,80 @@
 import Data.List (minimumBy, nub, find)
 import Data.Bits (shiftL, testBit, setBit, clearBit, popCount)
 import Data.Array (Array, array, bounds, (!), (//), accumArray)
+import Debug.Trace (trace)
 
 -- PFL 2024/2025 Practical assignment 1
-
--- Uncomment the some/all of the first three lines to import the modules, do not change the code of these lines.
 
 type City = String
 type Path = [City]
 type Distance = Int
 type RoadMap = [(City,City,Distance)]
+
+data Priority = Priority {city :: City, dist :: Distance }
+    deriving (Show, Eq)
+
+--declaracao da heap
+data Heap = Empty | Node Priority  Heap  Heap
+    deriving (Show, Eq)
+
+type DPTable = Array (Int, Int) (Maybe Distance)
+
+--merge e rebalanceia a heap
+mergeHeap :: Heap -> Heap -> Heap
+mergeHeap Empty heap = heap
+mergeHeap heap Empty = heap
+mergeHeap (Node x esq1 dir1) (Node y esq2 dir2) 
+    | dist x <= dist y = Node x esq1 (mergeHeap dir1 (Node y esq2 dir2))
+    | otherwise = Node y esq2 (mergeHeap (Node x esq1 dir1) dir2)
+
+--insert na heap
+insertHeap :: Priority -> Heap -> Heap
+insertHeap x Empty = Node x Empty Empty
+insertHeap x (Node y esq dir) = mergeHeap (Node x Empty Empty) (Node y esq dir)
+
+--remove o primeiro elemento da heap
+removeHeap :: Heap -> Heap
+removeHeap Empty = Empty
+removeHeap (Node _ esq dir) = mergeHeap esq dir
+
+removeXHeap :: City -> Heap -> Heap
+removeXHeap _ Empty = Empty
+removeXHeap c (Node (Priority c1 d) esq dir) 
+    | c == c1 = mergeHeap esq dir
+    | otherwise = Node (Priority c1 d) (removeXHeap c esq) (removeXHeap c dir)
+
+--retorna o primeiro elemento da heap
+getMinHeap :: Heap -> Maybe Priority
+getMinHeap Empty = Nothing
+getMinHeap (Node p _ _) = Just p
+
+--altera os valores das distancias
+modifyPriority :: City -> Distance -> Heap -> Heap
+modifyPriority _ _ Empty = Empty
+modifyPriority city newDistance (Node (Priority c d) esq dir)
+    | c == city && newDistance < d = mergeHeap (Node (Priority c newDistance) esq dir) Empty
+    | otherwise = Node (Priority c d)(modifyPriority city newDistance esq) (modifyPriority city newDistance dir)
+
+--verifica se uma dada cidade está presente na heap
+findHeap :: City -> Heap -> Maybe Priority
+findHeap c Empty = Nothing
+findHeap c1 (Node(Priority c2 d) esq dir) 
+    | c1 == c2 = Just (Priority c2 d)
+    | otherwise = case findHeap c1 esq of
+        Just priority -> Just priority
+        Nothing -> findHeap c1 dir
+
+updateHeap :: Priority -> Heap -> Distance -> [(City,City)] -> City -> (Heap,[(City,City)])
+updateHeap (Priority c _) heap d2 oldPredecessors origin =
+    case findHeap c heap of
+        Just (Priority c dt) ->  --"1" 100
+            if d2 < dt then 
+                let updatedHeap = insertHeap (Priority c d2) (removeXHeap c heap) 
+                    newPredecessors = (c, origin) : filter (\(city, _) -> city /= c) oldPredecessors  --fica apenas com os tuples que nao têm c como predecessor    
+                in (updatedHeap, newPredecessors)
+            else
+                (heap, oldPredecessors)
+        Nothing -> (heap, oldPredecessors)
 
 -- Função para criar uma lista de todas as cidades únicas
 -- RoadMap: Grafo
@@ -32,8 +97,8 @@ distance ((c1, c2, dist):roadMap) city1 city2
 adjacent :: RoadMap -> City -> [(City,Distance)]
 adjacent [] city = []
 adjacent ((c1, c2, dist):roadMap) city
-    | c1 == city = [(c2, dist)] ++ (adjacent roadMap city)
-    | c2 == city = [(c1,dist)] ++ (adjacent roadMap city)
+    | c1 == city = (c2, dist) : adjacent roadMap city
+    | c2 == city = (c1,dist) : adjacent roadMap city
     | otherwise = adjacent roadMap city
 
 --Função que calcula a distância de um dado caminho
@@ -63,8 +128,8 @@ rome roadMap = foldl compare [] (cities roadMap)
 adjacent2 :: RoadMap -> City -> [City]
 adjacent2 [] city = []
 adjacent2 ((c1, c2, dist):roadMap) city
-    | c1 == city = [c2] ++ (adjacent2 roadMap city)
-    | c2 == city = [c1] ++ (adjacent2 roadMap city)
+    | c1 == city = c2 : adjacent2 roadMap city
+    | c2 == city = c1 : adjacent2 roadMap city
     | otherwise = adjacent2 roadMap city
 
 --Função DFS para percorrer pelas cidades BLABLABLA
@@ -77,16 +142,63 @@ dfs roadMap city visited
         nVisited = city : visited
 
 
---temos que usar Set.size porque pode msm assim ocorrer duplicados ao fazer a funcao dfs
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected roadMap = length(nub (dfs roadMap (head(cities roadMap)) [])) == length(cities roadMap)
+isStronglyConnected roadMap = length (nub (dfs roadMap (head (cities roadMap)) [])) == length (cities roadMap)
 
 
+--constroi o caminho criado pelo dijkstra
+constructPath :: [(City,City)] -> City -> Path  
+constructPath predecessors end = 
+    case lookup end predecessors of
+        Nothing -> [end]
+        Just predecessor -> constructPath predecessors predecessor ++ [end]
+
+--algoritmo Dijkstra para encontrar os caminhos mais curtos entre cidades
+dijkstra :: RoadMap -> Heap -> City -> [City] -> [(City, City)] -> [Path]
+dijkstra roadMap Empty _ _ _ = []
+dijkstra roadMap heap end visited predecessors
+    | citi == end = trace "oi" [constructPath predecessors end] -- Found a path
+    | citi `elem` visited = 
+        trace ("City " ++ show citi ++ " has already been visited, updating distances.") $ 
+        dijkstra roadMap updatedHeap end visited updatedPredecessors -- If already visited, update distances
+    | otherwise = 
+        trace ("Visiting city: " ++ show citi ++ ", current distance: " ++ show dst) $
+        dijkstra roadMap newHeap end (citi : visited) newPredecessors  -- Mark as visited and update distances
+    where
+        Just (Priority citi dst) = getMinHeap heap -- Top of the heap
+        adjacents = adjacent roadMap citi -- Adjacent cities
+        -- Trace adjacent processing
+        newHeap = foldl (\heap (adj, d) -> 
+            trace ("Processing adjacent city: " ++ show adj) $
+            if adj `notElem` visited 
+            then 
+                trace ("Adding adjacent city: " ++ show adj ++ " with new distance: " ++ show (d + dst)) $ 
+                insertHeap (Priority adj (d + dst)) heap
+
+            else 
+                trace ("City " ++ show adj ++ " already visited.") $ 
+                heap) (removeHeap heap) adjacents -- Updated heap
+
+        (updatedHeap, updatedPredecessors) = foldl (\(h, preds) (adj, d) -> 
+            trace ("Checking predecessor for city: " ++ show adj) $
+            if adj `notElem` visited 
+            then 
+                let (nHeap, nPreds) = updateHeap (Priority adj (d + dst)) h (d + dst) preds citi 
+                in 
+                    trace ("Updated distance for city: " ++ show adj ++ " to " ++ show (d + dst)) $
+                    (nHeap, nPreds) 
+            else 
+                trace ("City " ++ show adj ++ " already visited during update.") $ 
+                (h, preds)) (removeHeap heap, predecessors) adjacents
+        
+        newPredecessors = predecessors ++ 
+            [(adj, citi) | (adj, _) <- adjacents, adj `notElem` visited] -- Updated predecessors
+
+
+--funcao que utiliza o algoritmo Dijkstra para calcular os paths mais curtos entre 2 cidades
 shortestPath :: RoadMap -> City -> City -> [Path]
-shortestPath = undefined
+shortestPath roadMap start end = dijkstra roadMap (insertHeap (Priority start 0) Empty) end [] []
 
--- Define o tipo DPTable como um Array indexado por (cidade atual, cidades visitadas) que armazena uma Distance (Maybe)
-type DPTable = Array (Int, Int) (Maybe Distance)
 
 -- Função para transformar uma string em integer
 -- City: cidade (ex.: "0")
@@ -136,7 +248,7 @@ travelSales roadMap =
     let allCities = cities roadMap
         n = length allCities
         startCity = "0"  -- Começa-se pela cidade "0" 
-        allVisited = (1 `shiftL` n) - 1  -- Bitmask para todas as cidades visitadas
+        allVisited = (1 `shiftL` n) - 1  -- Bitmask para todas as cidades visitadas (11111101)
         dp = array ((0, 0), (n - 1, allVisited)) [((i, visited), Nothing) | i <- [0..n-1], visited <- [0..allVisited]] -- Dynamic Programming table para guardar as menores distâncias
     in buildPath roadMap dp startCity allVisited  -- Chama a função buildPath para construir o caminho para o TSP
 
@@ -172,7 +284,10 @@ gTest1 :: RoadMap
 gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4),("2","5",4),("8","6",6),("2","3",7),("7","8",7),("0","7",8),("1","2",8),("3","4",9),("5","4",10),("1","7",11),("3","5",14)]
 
 gTest2 :: RoadMap
-gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
+gTest2 = [("0","1",100),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
 
 gTest3 :: RoadMap -- unconnected graph
 gTest3 = [("0","1",4),("2","3",2)]
+
+gTest4 :: RoadMap
+gTest4 = [("0","1",100), ("0", "5", 1000), ("1","2",15),("2","3",20),("3","4",55),("4","5",25), ("5", "6", 1)]
