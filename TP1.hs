@@ -234,11 +234,15 @@ distanceOrDefault roadMap city1 city2 defaultDist =
 -- Distance: retorna a menor distância total necessária para visitar todas as cidades do RoadMap e retornar à cidade inicial, partindo da cidade atual e sem visitar as que já foram visitadas
 tspDP :: RoadMap -> DPTable -> City -> City -> Int -> Int -> Distance
 tspDP roadMap dp startCity currentCity visited allVisited
-    | visited == allVisited = distanceOrDefault roadMap currentCity startCity 2147483647  -- Se tiver visitado tudo, retorna para o inicial
-    | otherwise = dp ! (cityIndex currentCity, visited) `orElse` -- Se ainda não estiver no DPTable então resolve-se o subproblema recursivamente para encontrar a menor distância
-                minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a próxima, se não exsitir fica o INT_MAX
-                        + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited -- Soma-se a menor distância da proxima cidade para a primeira cidade com a próxima cidade visitada
-                        | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- Faz se isto para todas as cidades ainda não visitadas
+    | visited == allVisited = distanceOrDefault roadMap currentCity startCity 2147483647  -- Caso base
+    | otherwise =
+        let cachedResult = dp ! (cityIndex currentCity, visited) `orElse` computeAndStore
+            computeAndStore = 
+                let result = minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a próxima, se não exsitir fica o INT_MAX
+                                      + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited -- Soma-se a menor distância da proxima cidade para a primeira cidade com a próxima cidade visitada
+                                      | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- Faz se isto para todas as cidades ainda não visitadas
+                in result `seq` (dp // [((cityIndex currentCity, visited), Just result)] ! (cityIndex currentCity, visited)) `orElse` result
+        in cachedResult
 
 -- Função que resolve o problema TSP e retorna o caminho mais rápido
 -- RoadMap: Grafo
@@ -248,7 +252,7 @@ travelSales roadMap =
     let allCities = cities roadMap
         n = length allCities
         startCity = "0"  -- Começa-se pela cidade "0" 
-        allVisited = (1 `shiftL` n) - 1  -- Bitmask para todas as cidades visitadas (11111101)
+        allVisited = (1 `shiftL` n) - 1  -- Bitmask para todas as cidades visitadas (11111111)
         dp = array ((0, 0), (n - 1, allVisited)) [((i, visited), Nothing) | i <- [0..n-1], visited <- [0..allVisited]] -- Dynamic Programming table para guardar as menores distâncias
     in buildPath roadMap dp startCity allVisited  -- Chama a função buildPath para construir o caminho para o TSP
 
