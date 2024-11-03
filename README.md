@@ -21,7 +21,7 @@ travelSales roadMap =
         dp = array ((0, 0), (n - 1, allVisited)) [((i, visited), Nothing) | i <- [0..n-1], visited <- [0..allVisited]] -- Dynamic Programming table para guardar as menores distâncias
     in buildPath roadMap dp startCity allVisited  -- Chama a função buildPath para construir o caminho para o TSP
 ```
-Na função principal, Deixa-se a cidade "0" como a cidade inicial e final. De seguida, faz-se um `BitMask` para depois verificar se todas as cidades foram visitadas (exemplo: se o grafo tiver 4 cidades então o bistmask será 1111). O array `dp` é a famosa tabela de programação dinâmica que tem n linhas e 2^n colunas, onde estão apresentadas as n linhas das cidades e as*2^n colunas de todas as situações possíveis. Cria-se a tabela com tudo em Nothing. Por fim, chama a função `buildPath` com os argumentos necessários.
+Na função principal, deixa-se a cidade "0" como a cidade inicial e final. De seguida, faz-se um `BitMask` para depois verificar se todas as cidades foram visitadas (exemplo: se o grafo tiver 4 cidades então o bistmask será 1111). O array `dp` é a famosa tabela de programação dinâmica que tem n linhas e 2^n colunas, onde estão apresentadas as n linhas das cidades e as*2^n colunas de todas as situações possíveis. Cria-se a tabela com tudo em Nothing. Por fim, chama a função `buildPath` com os argumentos necessários.
 ```c
 buildPath :: RoadMap -> DPTable -> City -> Int -> Path
 buildPath roadMap dp startCity allVisited =
@@ -52,3 +52,40 @@ tspDP roadMap dp startCity currentCity visited allVisited
         in cachedResult 
 ```
 Nesta função auxiliar, ela recebe a tabela de programação dinâmica, a cidade inicial, a cidade atual, o bitmask das cidades visitadas naquele momento e o bitmask de todas as cidades visitadas. Em primeiro lugar, se todas as cidades forem visitadas, então a função retorna a distância entre a cidade atual e a cidade inicial (se não existir, retorna maxBound que é 2147483647). Caso ainda não estejam todas as cidades visitadas, a função vê se o subproblema já foi resolvido, se não resolve-se, dando o mínimo das distâncias entre a cidade atual e todas outras cidades ainda não visitadas. De seguida, guardo o resultado para futuramente não refazer o mesmo subproblema.
+
+
+## shortestPath
+A nossa função shortesPath é uma aproximação Brute-Force e tem complexidade exponecial devido á busca de todos os paths possíveis de um grafo. A ideia inicial foi resolver shortestPath utilizando o algoritmo de Dijkstra que tem complexidade O(E + V \log V)), mas devido a algumas dificuldades, acabamos por optar pela aproximação Brute-Force.
+```c
+shortestPath :: RoadMap -> City -> City -> [Path]
+shortestPath roadMap start end =
+    let allPaths = findAllPaths roadMap start end  
+        pathsDistances = [(path, pathDistance roadMap path) | path <- allPaths]  
+        validPaths = [(path, dist) | (path, Just dist) <- pathsDistances]  -- remove possiveis Nothing Distance
+        minDistance = minimum [dist | (_, dist) <- validPaths]  
+    in [path | (path, dist) <- validPaths, dist == minDistance] 
+```
+A função principal simplesmente recolhe de todos os paths possíveis aqueles que têm a menor distância total.
+```c
+findAllPaths :: RoadMap -> City -> City -> [Path]
+findAllPaths roadMap start end = dfs start []
+  where
+    dfs current visited
+        | current == end = [reverse (end : visited)]  -- reverte a ondem do caminho criado
+        | current `elem` visited = [] 
+        | otherwise = concatMap extendPath adjacents
+        where
+            adjacents = adjacent2 roadMap current  
+            extendPath nextCity = dfs nextCity (current : visited) 
+```
+A funcção findAllPaths recebe um grafo e duas cidades, sendo elas a cidade de partida e a cidade de chegado. A função vai fazendo dfs pelo grafo até que a cidade de chegada seja encontrada, guardando assim o caminho da cidade de partida á de chegada.
+```c
+dfs :: RoadMap -> City -> [City] -> [City]                  
+dfs roadMap city visited
+    | city `elem` visited = [] --se estiver visitada nao adiciona
+    | otherwise = city : concatMap(\adjacent -> dfs roadMap adjacent nVisited) adjacents
+    where  
+        adjacents = adjacent2 roadMap city
+        nVisited = city : visited
+```
+A função dfs recebe um grafo, uma cidade atual (onde se encontra naquele momento) e uma lista de cidades já visitadas. A função percorre o grafo andando pelas cidades não visitadas, acumulando assim o caminho que vai fazendo.
