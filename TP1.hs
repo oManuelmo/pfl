@@ -236,7 +236,7 @@ tspDP :: RoadMap -> DPTable -> City -> City -> Int -> Int -> Distance
 tspDP roadMap dp startCity currentCity visited allVisited
     | visited == allVisited = distanceOrDefault roadMap currentCity startCity 2147483647  -- Se tiver visitado tudo, retorna para o inicial
     | otherwise = dp ! (cityIndex currentCity, visited) `orElse` -- Se ainda não estiver no DPTable então resolve-se o subproblema recursivamente para encontrar a menor distância
-                minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a prxoima, se não exsitir fica o INT_MAX
+                minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a próxima, se não exsitir fica o INT_MAX
                         + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited -- Soma-se a menor distância da proxima cidade para a primeira cidade com a próxima cidade visitada
                         | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- Faz se isto para todas as cidades ainda não visitadas
 
