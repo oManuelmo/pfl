@@ -105,13 +105,13 @@ dfs roadMap city visited
         nVisited = city : visited
 
 
--- Função que retorna todos os paths possíveis de um RoadMap
+-- Função que retorna todos os caminhos possíveis de um RoadMap
 -- RoadMap: Grafo
 findAllPaths :: RoadMap -> City -> City -> [Path]
 findAllPaths roadMap start end = dfs start []
   where
     dfs current visited
-        | current == end = [reverse (end : visited)]  -- reverte a ondem do path criado
+        | current == end = [reverse (end : visited)]  -- reverte a ondem do caminho criado
         | current `elem` visited = [] 
         | otherwise = concatMap extendPath adjacents
         where
@@ -125,7 +125,7 @@ isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected roadMap = length (nub (dfs roadMap (head (cities roadMap)) [])) == length (cities roadMap)
 
 
--- Função que utiliza uma aproximação brute force para calcular o menor path entre 2 cidades
+-- Função que utiliza uma aproximação brute force para calcular o menor caminho entre 2 cidades
 -- RoadMap: Grafo
 -- City: Cidade inicial
 -- City: Cidade final
