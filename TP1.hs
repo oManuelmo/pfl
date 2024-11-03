@@ -241,7 +241,7 @@ tspDP roadMap dp startCity currentCity visited allVisited
                 let result = minimum [distanceOrDefault roadMap currentCity nextCity 2147483647 -- Distância da cidade atual para a próxima, se não exsitir fica o INT_MAX
                                       + tspDP roadMap dp startCity nextCity (visited `setBit` nextCityIdx) allVisited -- Soma-se a menor distância da proxima cidade para a primeira cidade com a próxima cidade visitada
                                       | nextCity <- cities roadMap, let nextCityIdx = cityIndex nextCity, not (testBit visited nextCityIdx)] -- Faz se isto para todas as cidades ainda não visitadas
-                in result `seq` (dp // [((cityIndex currentCity, visited), Just result)] ! (cityIndex currentCity, visited)) `orElse` result
+                in result `seq` (dp // [((cityIndex currentCity, visited), Just result)] ! (cityIndex currentCity, visited)) `orElse` result -- Guarda o resultado na tabela
         in cachedResult
 
 -- Função que resolve o problema TSP e retorna o caminho mais rápido
