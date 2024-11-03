@@ -1,5 +1,5 @@
 
-### T04_G02:
+# T04_G02:
 Tomás Sabino Dias Costa up202205152@fe.up.pt  **50%**
 
 Manuel Mo up202205000@fe.up.pt  **50%**
@@ -9,7 +9,7 @@ Manuel Mo up202205000@fe.up.pt  **50%**
 **Manuel**: cities, areAdjacent, distance, adjacent, pathDistance, travelSales (50%)
 
 
-### travelSales
+## travelSales
 A nossa função travelSales é em *dynamic programming*. Ou seja, o tempo de complexidade é **O(2^n)**, devido à table de *memoização* que faz com que não faça subproblemas repetidos: `type DPTable = Array (Int, Int) (Maybe Distance)`.
 ```c
 travelSales :: RoadMap -> Path
